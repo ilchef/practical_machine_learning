@@ -1,0 +1,31 @@
+---
+title: "Coursera: Practical Machine Learning"
+author: "Tom Ilchef"
+date: "25/04/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Load libraries 
+```{r}
+library(tidyr)
+library(caret)
+```
+
+Acquire Data
+```{r}
+final_test_df <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+training_raw_df <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+```
+
+
+split training into test train 
+```{r}
+inTrain  <- createDataPartition(training_raw_df$classe
+                                , p=0.75
+                                , list=FALSE)
+```

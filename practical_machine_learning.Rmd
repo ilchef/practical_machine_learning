@@ -14,6 +14,7 @@ Load libraries
 ```{r}
 library(tidyr)
 library(caret)
+library(dlookr)
 ```
 
 Acquire Data
@@ -25,7 +26,16 @@ training_raw_df <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn
 
 split training into test train 
 ```{r}
-inTrain  <- createDataPartition(training_raw_df$classe
+xval_split  <- createDataPartition(training_raw_df$classe
                                 , p=0.75
                                 , list=FALSE)
+train <- training_raw_df[xval_split, ]
+test  <- training_raw_df[-xval_split, ]
 ```
+
+Exploratory Data Analysis
+```{r}
+describe(train)
+```
+
+

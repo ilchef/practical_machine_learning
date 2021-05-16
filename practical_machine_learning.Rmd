@@ -14,7 +14,9 @@ Load libraries
 ```{r}
 library(tidyr)
 library(caret)
+library(dplyr)
 library(dlookr)
+library(GGally)
 ```
 
 Acquire Data
@@ -33,9 +35,46 @@ train <- training_raw_df[xval_split, ]
 test  <- training_raw_df[-xval_split, ]
 ```
 
-Exploratory Data Analysis
+data cleaning
 ```{r}
-describe(train)
+# removing variables that have more than 5% nulls
+
+t_desc <- describe(train)%>%
+        filter(na <= nrow(t_desc)*0.05) %>%
+        pull(variable) 
+
+# also going to remove ID variables manually. 
+train <- train %>%
+        select(!!t_desc) %>%
+        select(-c("X","raw_timestamp_part_1","raw_timestamp_part_2"))
+
+test <- test %>%
+        select(!!t_desc) %>%
+        select(-c("X","raw_timestamp_part_1","raw_timestamp_part_2"))
+
 ```
 
+Exploratory Data Analysis
+```{r}
+panel.hist <- function(x, ...) {
+    usr <- par("usr")
+    on.exit(par(usr))
+    par(usr = c(usr[1:2], 0, 1.5))
+    his <- hist(x, plot = FALSE)
+    breaks <- his$breaks
+    nB <- length(breaks)
+    y <- his$counts
+    y <- y/max(y)
+    rect(breaks[-nB], 0, breaks[-1], y, col = rgb(0, 1, 1, alpha = 0.5), ...)
+    # lines(density(x), col = 2, lwd = 2) # Uncomment to add density lines
+}
 
+pairs(train,
+      upper.panel = NULL,         # Disabling the upper panel
+      diag.panel = panel.hist)    # Adding the histograms
+pairs
+
+
+
+cor(train) %>% as.data.frame() %>% ggcor()
+```

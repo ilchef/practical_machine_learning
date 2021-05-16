@@ -17,6 +17,7 @@ library(caret)
 library(dplyr)
 library(dlookr)
 library(GGally)
+library(plotly)
 ```
 
 Acquire Data
@@ -40,7 +41,7 @@ data cleaning
 # removing variables that have more than 5% nulls
 
 t_desc <- describe(train)%>%
-        filter(na <= nrow(t_desc)*0.05) %>%
+        filter(na <= nrow(!!train)*0.05) %>%
         pull(variable) 
 
 # also going to remove ID variables manually. 
@@ -76,5 +77,10 @@ pairs
 
 
 
-cor(train) %>% as.data.frame() %>% ggcor()
+cor(train) %>% 
+  as.data.frame() %>% 
+  ggcorr(low = "red"
+         , mid = "grey"
+         , high = "green") %>%
+  ggplotly()
 ```

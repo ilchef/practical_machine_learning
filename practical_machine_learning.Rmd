@@ -165,3 +165,11 @@ summary_table <- (results_dt$overall %>% as.data.frame()%>% head(1) %>% rename(a
 rownames(summary_table) <- c()
 summary_table
 ```
+
+
+
+apply to test data!!!
+```{r}
+
+ predict(gradient_boost, final_test_df)
+```

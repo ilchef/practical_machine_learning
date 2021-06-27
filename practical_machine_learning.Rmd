@@ -17,7 +17,8 @@ library(caret)
 library(dplyr)
 library(dlookr)
 library(GGally)
-library(plotly)
+library(reshape2)
+library(rattle)
 ```
 
 Acquire Data
@@ -30,10 +31,10 @@ training_raw_df <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn
 split training into test train 
 ```{r}
 xval_split  <- createDataPartition(training_raw_df$classe
-                                , p=0.75
+                                , p=0.7
                                 , list=FALSE)
 train <- training_raw_df[xval_split, ]
-test  <- training_raw_df[-xval_split, ]
+validate  <- training_raw_df[-xval_split, ]
 ```
 
 data cleaning
@@ -42,45 +43,107 @@ data cleaning
 
 t_desc <- describe(train)%>%
         filter(na <= nrow(!!train)*0.05) %>%
-        pull(variable) 
+        select(variable) %>%
+        add_row(variable="classe")%>%
+        pull() 
 
 # also going to remove ID variables manually. 
 train <- train %>%
         select(!!t_desc) %>%
         select(-c("X","raw_timestamp_part_1","raw_timestamp_part_2"))
 
-test <- test %>%
+validate <- validate %>%
         select(!!t_desc) %>%
         select(-c("X","raw_timestamp_part_1","raw_timestamp_part_2"))
 
 ```
 
 Exploratory Data Analysis
+1. correlation 
 ```{r}
-panel.hist <- function(x, ...) {
-    usr <- par("usr")
-    on.exit(par(usr))
-    par(usr = c(usr[1:2], 0, 1.5))
-    his <- hist(x, plot = FALSE)
-    breaks <- his$breaks
-    nB <- length(breaks)
-    y <- his$counts
-    y <- y/max(y)
-    rect(breaks[-nB], 0, breaks[-1], y, col = rgb(0, 1, 1, alpha = 0.5), ...)
-    # lines(density(x), col = 2, lwd = 2) # Uncomment to add density lines
+get_upper_tri <- function(cormat){
+  cormat[upper.tri(cormat)]<- NA
+  return(cormat)
 }
 
-pairs(train,
-      upper.panel = NULL,         # Disabling the upper panel
-      diag.panel = panel.hist)    # Adding the histograms
-pairs
+correlation <- train %>% 
+  select(-classe)%>%
+  cor()%>%
+  round(2) %>%
+  get_upper_tri()%>%
+  melt()
 
+plot_cor <- correlation %>%
+  ggplot(aes(x=Var1,y=Var2,fill=value)) + 
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+   name="Pearson\nCorrelation") +
+  theme_minimal()+ 
+ theme(axis.text.x = element_text(angle = 90, vjust = 1, 
+    size = 12, hjust = 1))+
+ coord_fixed()
 
-
-cor(train) %>% 
-  as.data.frame() %>% 
-  ggcorr(low = "red"
-         , mid = "grey"
-         , high = "green") %>%
-  ggplotly()
+plot_cor
 ```
+
+
+Top 40 correlations (non trivial), ranked
+```{r}
+correlation %>%
+  filter(value != 1)%>%
+  mutate(value_abs = abs(value))%>%
+  arrange(value_abs%>%desc()) %>%
+  head(40)
+```
+
+distribution of classes
+```{r}
+plot_2 <- train %>%
+  ggplot(aes(x=classe, fill=classe)) +
+  geom_bar()
+plot_2
+```
+fairly balanced data
+
+
+Lets try a decision tree
+```{r, fig.width=10}
+control <- trainControl(method="cv", number=3, verboseIter=T)
+dec_tree <- train(classe~., data=train, method="rpart", trControl = control, tuneLength = 5)
+fancyRpartPlot(dec_tree$finalModel,cex=0.7)
+```
+
+```{r}
+dec_tree_predictions <- predict(dec_tree, validate)
+results_dt <- confusionMatrix(dec_tree_predictions, factor(validate$classe))
+results_dt
+```
+
+note that positive predictive value is quite bad generally, esp for classes B,C,D.
+
+
+Gradient Boosting
+```{r}
+gradient_boost <- train(classe~., data=train, method="gbm", trControl = control, tuneLength = 5)
+
+gradient_boost_predictions <- predict(gradient_boost, validate)
+results_gb <- confusionMatrix(gradient_boost_predictions, factor(validate$classe))
+results_gb
+```
+
+
+Random Forest
+```{r}
+random_forest <- train(classe~., data=train, method="rf", trControl = control, tuneLength = 5)
+
+random_forest_predictions <- predict(random_forest, validate)
+results_rf <- confusionMatrix(random_forest_predictions, factor(validate$classe))
+results_rf
+```
+
+
+
+
+Gradient Boosting is the most accurate.
+

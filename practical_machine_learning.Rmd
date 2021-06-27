@@ -104,6 +104,7 @@ plot_2 <- train %>%
   geom_bar()
 plot_2
 ```
+
 fairly balanced data
 
 
@@ -145,5 +146,22 @@ results_rf
 
 
 
-Gradient Boosting is the most accurate.
+Gradient Boosting is the most accurate, below - although random forrest performs pretty similarly.
 
+
+summary table - w/ OOS error rate
+```{r}
+summary_table <- (results_dt$overall %>% as.data.frame()%>% head(1) %>% rename(accuracy = ".") %>% mutate(oos_error = 1-accuracy
+                                                                                        , model = "Decision Tree")) %>% 
+  add_row(
+  results_rf$overall %>% as.data.frame()%>% head(1) %>% rename(accuracy = ".") %>% mutate(oos_error = 1-accuracy
+                                                                                        , model = "Random Forest")
+) %>% 
+  add_row(
+  results_gb$overall %>% as.data.frame()%>% head(1) %>% rename(accuracy = ".") %>% mutate(oos_error = 1-accuracy
+                                                                                        , model = "Gradient Boosting")
+)
+
+rownames(summary_table) <- c()
+summary_table
+```
